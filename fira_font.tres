@@ -1,0 +1,5 @@
+[gd_resource type="SystemFont" format=3 uid="uid://bxvifgrbfethi"]
+
+[resource]
+font_names = PackedStringArray("Fira Mono")
+oversampling = 4.0

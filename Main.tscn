@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://cjerafeiil5vm"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_qgfoy"]
+[ext_resource type="PackedScene" uid="uid://bb8k0son0leij" path="res://Game.tscn" id="2_2smkl"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_qgfoy")
+
+[node name="Game" parent="." instance=ExtResource("2_2smkl")]
+
+[connection signal="level_completed" from="Game" to="." method="_on_game_level_completed"]

@@ -1,5 +1,7 @@
 extends Node
 
+class_name Game
+
 enum Tile {
 	NOTHING,
 	PLAYER_UP,
@@ -21,10 +23,16 @@ enum Tile {
 signal level_completed
 
 var grid: Array[Tile] = []
-var flower_seeds := 0
+var flower_seeds := 0:
+	get:
+		return flower_seeds
+	set(value):
+		flower_seeds_label.text = str(value)
+		flower_seeds = value
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player: Node = $Player
+@onready var flower_seeds_label = $UI/FlowerSeed
 
 @onready var text_edit: TextEdit = $LevelEditor/TextEdit
 
@@ -53,14 +61,15 @@ X........
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	text_edit.text = current_level[1]
-	load_level(current_level)
 
 func load_level(level: Array):
 	level_complete = false
+	updating_world = false
 	grid.clear()
 	undo_state.clear()
 	flower_seeds = level[0]
-	var text = level[1] 
+	var text = level[1]
+	text_edit.text = text
 	for x in text:
 		match x:
 			".":
@@ -75,7 +84,7 @@ func load_level(level: Array):
 				grid.push_back(Tile.FLOWER)
 			"P":
 				grid.push_back(Tile.PLAYER_UP)
-
+	print(len(grid))
 	for x in range(WIDTH):
 		for y in range(HEIGHT):
 			var index = x + y * WIDTH
@@ -132,7 +141,6 @@ func player_move(direction: Vector2i):
 			set_tile(current_pos, Tile.NOTHING)
 		Tile.EXIT_OPENED:
 			set_tile(next_pos, Tile.PLAYER_UP)
-			level_completed.emit()
 			level_complete = true
 	
 func get_tile(position: Vector2i) -> Tile:
@@ -251,6 +259,8 @@ func move(direction: Vector2i):
 		player_move(direction)
 		await update_world()
 		check_open_gate()
+		if level_complete:
+			level_completed.emit()
 
 func place_flower():
 	if flower_seeds == 0:
@@ -265,8 +275,8 @@ func place_flower():
 				direction = Vector2i.DOWN
 			Tile.PLAYER_LEFT:
 				direction = Vector2i.LEFT
-			Tile.PLAYER_DOWN:
-				direction = Vector2i.DOWN
+			Tile.PLAYER_RIGHT:
+				direction = Vector2i.RIGHT
 	var flower_pos := player_pos() + direction
 	if can_place_flower(flower_pos):
 		undo_state.push_back([flower_seeds, grid.duplicate()])

@@ -2,6 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://c7npeweia1o70" path="res://icon.svg" id="1_r1av1"]
 [ext_resource type="Script" path="res://game.gd" id="1_t34n1"]
+[ext_resource type="SystemFont" uid="uid://bxvifgrbfethi" path="res://fira_font.tres" id="2_yxk3r"]
 [ext_resource type="PackedScene" uid="uid://605gdswvlsf6" path="res://Player.tscn" id="3_ymqlm"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lntjg"]
@@ -74,12 +75,23 @@ texture = ExtResource("1_r1av1")
 [sub_resource type="TileSet" id="TileSet_v80br"]
 sources/0 = SubResource("TileSetAtlasSource_lntjg")
 
-[sub_resource type="SystemFont" id="SystemFont_gj4f4"]
-font_names = PackedStringArray("Fira Mono")
-oversampling = 4.0
-
 [node name="Game" type="Node2D"]
 script = ExtResource("1_t34n1")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="FlowerSeed" type="Label" parent="UI"]
+layout_mode = 0
+offset_left = -23.0
+offset_top = 2.0
+offset_right = -8.0
+offset_bottom = 22.0
+theme_override_fonts/font = ExtResource("2_yxk3r")
+text = "1"
 
 [node name="TileMap" type="TileMap" parent="."]
 tile_set = SubResource("TileSet_v80br")
@@ -100,6 +112,7 @@ position = Vector2(72, 80)
 [node name="Player" parent="." instance=ExtResource("3_ymqlm")]
 
 [node name="LevelEditor" type="Control" parent="."]
+visible = false
 layout_mode = 3
 anchors_preset = 0
 offset_right = 40.0
@@ -111,7 +124,7 @@ offset_left = -50.0
 offset_top = -26.0
 offset_right = 25.0
 offset_bottom = 152.0
-theme_override_fonts/font = SubResource("SystemFont_gj4f4")
+theme_override_fonts/font = ExtResource("2_yxk3r")
 theme_override_font_sizes/font_size = 10
 text = "XXXXEXXXX
 .........
