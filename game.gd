@@ -6,7 +6,8 @@ enum Tile {
 	PLAYER_DOWN,
 	PLAYER_LEFT,
 	PLAYER_RIGHT,
-	EXIT,
+	EXIT_CLOSED,
+	EXIT_OPENED,
 	FLOWER,
 	FLOWER_BLOOMED,
 	ROCK,
@@ -17,7 +18,11 @@ enum Tile {
 	ROOT_DOWN,
 }
 
+signal level_completed
+
 var grid: Array[Tile] = []
+var flower_seeds := 0
+
 @onready var tile_map: TileMap = $TileMap
 @onready var player: Node = $Player
 
@@ -30,33 +35,38 @@ var updating_world := false
 
 var undo_state: Array = []
 
-var level = """
+var level_complete := false 
+
+# [Flower seeds, Level Text]
+var current_level = [1, """\
 XXXXEXXXX
 .........
 .........
 .........
-.........
+X.....X..
 ......FW.
 F.....X..
 .........
-.........
-....P....
-"""
+X........
+....P...."""]
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	text_edit.text = level
-	load_level(level)
+	text_edit.text = current_level[1]
+	load_level(current_level)
 
-func load_level(text: String):
+func load_level(level: Array):
+	level_complete = false
 	grid.clear()
 	undo_state.clear()
+	flower_seeds = level[0]
+	var text = level[1] 
 	for x in text:
 		match x:
 			".":
 				grid.push_back(Tile.NOTHING)
 			"E":
-				grid.push_back(Tile.EXIT)
+				grid.push_back(Tile.EXIT_CLOSED)
 			"W":
 				grid.push_back(Tile.WATER)
 			"X":
@@ -66,7 +76,6 @@ func load_level(text: String):
 			"P":
 				grid.push_back(Tile.PLAYER_UP)
 
-	undo_state.push_back(grid.duplicate())
 	for x in range(WIDTH):
 		for y in range(HEIGHT):
 			var index = x + y * WIDTH
@@ -80,13 +89,36 @@ func player_pos() -> Vector2i:
 	
 	push_error("Player not found")
 	return Vector2i.ZERO
+	
+func exit_pos() -> Vector2i:
+	for i in grid.size():
+		if grid[i] == Tile.EXIT_CLOSED or grid[i] == Tile.EXIT_OPENED:
+			return Vector2i(i % WIDTH, i / WIDTH)
+	
+	push_error("Exit not found")
+	return Vector2i.ZERO
 
+func player_can_move(direction: Vector2i) -> bool:
+	var next_pos := player_pos() + direction
+	var next_tile := get_tile(next_pos)
+	match next_tile:
+		Tile.NOTHING, Tile.EXIT_OPENED:
+			return true
+	return false
+
+func can_place_flower(pos: Vector2i) -> bool:
+	var tile := get_tile(pos)
+	match tile:
+		Tile.NOTHING:
+			return true
+	return false
+	
 func player_move(direction: Vector2i):
 	var current_pos := player_pos()
 	var next_pos := current_pos + direction
 	var next_tile := get_tile(next_pos)
 	match next_tile:
-		Tile.NOTHING, Tile.EXIT:
+		Tile.NOTHING:
 			player.position = $TileMap.map_to_local(next_pos)
 			match direction:
 				Vector2i.UP:
@@ -97,8 +129,11 @@ func player_move(direction: Vector2i):
 					set_tile(next_pos, Tile.PLAYER_LEFT)
 				Vector2i.RIGHT:
 					set_tile(next_pos, Tile.PLAYER_RIGHT)
-
 			set_tile(current_pos, Tile.NOTHING)
+		Tile.EXIT_OPENED:
+			set_tile(next_pos, Tile.PLAYER_UP)
+			level_completed.emit()
+			level_complete = true
 	
 func get_tile(position: Vector2i) -> Tile:
 	if position.x < 0 or position.x >= WIDTH or position.y < 0 or position.y >= HEIGHT:
@@ -116,8 +151,10 @@ func set_tile(position: Vector2i, tile: Tile):
 			tile_map.set_cell(1, position, 0, Vector2i(3, 2))
 		Tile.ROCK:
 			tile_map.set_cell(1, position, 0, Vector2i(3, 5))
-		Tile.EXIT:
+		Tile.EXIT_CLOSED:
 			tile_map.set_cell(1, position, 0, Vector2i(2, 4))
+		Tile.EXIT_OPENED:
+			tile_map.set_cell(1, position, 0, Vector2i(7, 1))
 		Tile.PLAYER_UP, Tile.PLAYER_DOWN, Tile.PLAYER_LEFT, Tile.PLAYER_RIGHT:
 			player.position = tile_map.map_to_local(position)
 		Tile.FLOWER:
@@ -128,36 +165,29 @@ func set_tile(position: Vector2i, tile: Tile):
 			tile_map.set_cell(1, position, 0, Vector2i(4, 1))
 
 func _input(event):
-	if updating_world:
+	if updating_world || level_complete:
 		return
 	if event.is_action_pressed("show_editor"):
 		$LevelEditor.visible = !$LevelEditor.visible
+	if event.is_action_pressed("place_flower"):
+		place_flower()
 	if event.is_action_pressed("move_up"):
-		undo_state.push_back(grid.duplicate())
-		player_move(Vector2i.UP)
-		update_world()
+		move(Vector2i.UP)
 	if event.is_action_pressed("move_down"):
-		undo_state.push_back(grid.duplicate())
-		player_move(Vector2i.DOWN)
-		update_world()
+		move(Vector2i.DOWN)
 	if event.is_action_pressed("move_left"):
-		undo_state.push_back(grid.duplicate())
-		player_move(Vector2i.LEFT)
-		update_world()
+		move(Vector2i.LEFT)
 	if event.is_action_pressed("move_right"):
-		undo_state.push_back(grid.duplicate())
-		player_move(Vector2i.RIGHT)
-		update_world()
+		move(Vector2i.RIGHT)
 	if event.is_action_pressed("undo"):
 		undo()
 	if event.is_action_pressed("reset"):
 		reset()
-			
 
 func update_world():
 	updating_world = true
 	while update_world_tiles():
-		await get_tree().create_timer(.1).timeout
+		await get_tree().create_timer(.05).timeout
 	updating_world = false
 		
 func update_world_tiles() -> bool:
@@ -206,7 +236,7 @@ func update_world_tiles() -> bool:
 					update_again = true
 	
 	return update_again
-	
+
 func has_water_for_flower(pos: Vector2i) -> bool:
 	var tile := get_tile(pos)
 	match tile:
@@ -215,23 +245,72 @@ func has_water_for_flower(pos: Vector2i) -> bool:
 			
 	return false
 
+func move(direction: Vector2i):
+	if player_can_move(direction):
+		undo_state.push_back([flower_seeds, grid.duplicate()])
+		player_move(direction)
+		await update_world()
+		check_open_gate()
+
+func place_flower():
+	if flower_seeds == 0:
+		return
+	
+	var direction := Vector2i.UP
+	for x in grid:
+		match x:
+			Tile.PLAYER_UP:
+				direction = Vector2i.UP
+			Tile.PLAYER_DOWN:
+				direction = Vector2i.DOWN
+			Tile.PLAYER_LEFT:
+				direction = Vector2i.LEFT
+			Tile.PLAYER_DOWN:
+				direction = Vector2i.DOWN
+	var flower_pos := player_pos() + direction
+	if can_place_flower(flower_pos):
+		undo_state.push_back([flower_seeds, grid.duplicate()])
+		flower_seeds -= 1
+		set_tile(flower_pos, Tile.FLOWER)
+		await update_world()
+		check_open_gate()
+
+func check_open_gate():
+	# If exit already open or won, do nothing
+	if exit_opened() || level_complete:
+		return
+	
+	var all_flowers_bloomed = true
+	for x in grid:
+		if x == Tile.FLOWER:
+			all_flowers_bloomed = false
+	if flower_seeds == 0 and all_flowers_bloomed:
+		set_tile(exit_pos(), Tile.EXIT_OPENED)
+
+func exit_opened():
+	for x in grid:
+		if x == Tile.EXIT_OPENED:
+			return true
+	return false
+
 func undo():
-	print(len(undo_state))
 	if len(undo_state) > 0:
 		var state = undo_state.pop_back()
+		var level = state[1]
+		flower_seeds = state[0]
 		for x in range(WIDTH):
 			for y in range(HEIGHT):
 				var index = x + y * WIDTH
-				# print(state[index])
-				set_tile(Vector2i(x, y), state[index])
-		if len(undo_state) == 0:
-			undo_state.push_back(state)
+				set_tile(Vector2i(x, y), level[index])
 
 func reset():
-	load_level(level)
+	load_level(current_level)
 
 func _on_text_edit_text_changed():
-	level = text_edit.text
+	current_level[1] = text_edit.text
 
 func _on_level_editor_button_pressed():
-	load_level(level)
+	load_level(current_level)
+
+func _on_spin_box_value_changed(value):
+	current_level[0] = value
