@@ -1,10 +1,11 @@
 [gd_scene load_steps=2 format=3 uid="uid://g40iy2lruyds"]
 
-[ext_resource type="Texture2D" uid="uid://c7npeweia1o70" path="res://icon.svg" id="1_5t08e"]
+[ext_resource type="Texture2D" uid="uid://cp1ac1o3m26sj" path="res://assets/sheet.png" id="1_akpnx"]
 
 [node name="Flower" type="Node2D"]
 
-[node name="Icon" type="Sprite2D" parent="."]
-modulate = Color(1, 0, 0.0627451, 1)
-scale = Vector2(0.25, 0.25)
-texture = ExtResource("1_5t08e")
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("1_akpnx")
+region_enabled = true
+region_rect = Rect2(16, 0, 16, 16)

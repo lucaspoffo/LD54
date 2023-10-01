@@ -63,6 +63,7 @@ func _ready():
 	text_edit.text = current_level[1]
 
 func load_level(level: Array):
+	current_level = level
 	level_complete = false
 	updating_world = false
 	grid.clear()
@@ -84,7 +85,6 @@ func load_level(level: Array):
 				grid.push_back(Tile.FLOWER)
 			"P":
 				grid.push_back(Tile.PLAYER_UP)
-	print(len(grid))
 	for x in range(WIDTH):
 		for y in range(HEIGHT):
 			var index = x + y * WIDTH
@@ -156,21 +156,31 @@ func set_tile(position: Vector2i, tile: Tile):
 		Tile.NOTHING:
 			tile_map.set_cell(1, position, -1)
 		Tile.WATER:
-			tile_map.set_cell(1, position, 0, Vector2i(3, 2))
+			tile_map.set_cell(1, position, 2, Vector2i(0, 1))
 		Tile.ROCK:
-			tile_map.set_cell(1, position, 0, Vector2i(3, 5))
+			tile_map.set_cell(1, position, 2, Vector2i(1, 1))
 		Tile.EXIT_CLOSED:
-			tile_map.set_cell(1, position, 0, Vector2i(2, 4))
+			tile_map.set_cell(1, position, 2, Vector2i(3, 0))
 		Tile.EXIT_OPENED:
-			tile_map.set_cell(1, position, 0, Vector2i(7, 1))
-		Tile.PLAYER_UP, Tile.PLAYER_DOWN, Tile.PLAYER_LEFT, Tile.PLAYER_RIGHT:
+			tile_map.set_cell(1, position, 2, Vector2i(4, 0))
+		Tile.PLAYER_LEFT:
 			player.position = tile_map.map_to_local(position)
+			player.set_frame_coords(Vector2i(2,2))
+		Tile.PLAYER_RIGHT:
+			player.position = tile_map.map_to_local(position)
+			player.set_frame_coords(Vector2i(1,2))
+		Tile.PLAYER_UP:
+			player.position = tile_map.map_to_local(position)
+			player.set_frame_coords(Vector2i(0,3))
+		Tile.PLAYER_DOWN:
+			player.position = tile_map.map_to_local(position)
+			player.set_frame_coords(Vector2i(0,2))
 		Tile.FLOWER:
-			tile_map.set_cell(1, position, 0, Vector2i(5, 6))
+			tile_map.set_cell(1, position, 2, Vector2i(0, 0))
 		Tile.FLOWER_BLOOMED:
-			tile_map.set_cell(1, position, 0, Vector2i(6, 5))
+			tile_map.set_cell(1, position, 1, Vector2i.ZERO, 1)
 		Tile.ROOT_UP, Tile.ROOT_LEFT, Tile.ROOT_RIGHT, Tile.ROOT_DOWN:
-			tile_map.set_cell(1, position, 0, Vector2i(4, 1))
+			tile_map.set_cell(1, position, 1, Vector2i.ZERO, 2)
 
 func _input(event):
 	if updating_world || level_complete:

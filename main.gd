@@ -26,15 +26,79 @@ XXXXEXXXX
 ....P...."""],
 [1,  """\
 XXXXEXXXX
+WWWX.XWWW
+WWWX.XWWW
+WWWX.XWWW
+WWWX.XWWW
+WWWW.WWWW
+WWWX.XWWW
+WWWX.XWWW
+WWWX.XWWW
+WWWXPXWWW"""],
+[1,  """\
+XXXXXXEXX
+.........
+.........
+.........
+....F....
+W...X...W
+.........
+.........
+.........
+....P...."""],
+[4, """\
+XXXXEXXXX
 ...X.X...
-...X.X...
-...X.X...
-...X.X...
-...W.W...
-...X.X...
-...X.X...
-...X.X...
-...XPX..."""],
+.XXX.XXX.
+.X.....X.
+.X.WXW.X.
+.X.XWXdw.X.
+.X.WXW.X.
+.X.....X.
+..XX.XX..
+...XPX...
+"""],
+[2,
+"""\
+XXXXEXXXX
+.........
+.........
+.........
+...F.F...
+....W....
+...F.F...
+.........
+.........
+....P....
+"""
+],
+#[11,
+#"""\
+#XXXXEXXXX
+#XXX...XXX
+#XXX.W.XXX
+#X.......X
+#XX.X.X.XX
+#X.......X
+#X.X.X.X.X
+#X.......X
+#XXX...XXX
+#XXXXPXXXX"""
+#],
+# Should be last? Pretty hard
+[2, """\
+XXXXEXXXX
+.........
+.........
+.F.....F.
+W.......W
+W.......W
+W.......W
+.F.....F.
+.........
+....P....
+"""
+],
 ]
 
 var current_level := 0
@@ -46,7 +110,7 @@ func _ready():
 
 func _on_game_level_completed():
 	if current_level == final_level:
-		# TODO: load end game scene
+		$End.visible = true
 		return
 	
 	current_level += 1
