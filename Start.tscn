@@ -1,12 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://cjtmckwwhaef"]
+[gd_scene load_steps=4 format=3 uid="uid://cjtmckwwhaef"]
 
 [ext_resource type="TileSet" uid="uid://doqvklwd8owwj" path="res://assets/tile_set.tres" id="1_30v61"]
 [ext_resource type="Script" path="res://start.gd" id="1_w7hjw"]
 [ext_resource type="FontVariation" uid="uid://mtr26n873h8n" path="res://fira_font.tres" id="2_ined1"]
-
-[sub_resource type="SystemFont" id="SystemFont_myx51"]
-font_names = PackedStringArray("Fira Mono")
-oversampling = 4.0
 
 [node name="Start" type="Node2D"]
 script = ExtResource("1_w7hjw")
@@ -33,7 +29,7 @@ offset_left = 169.0
 offset_top = 182.0
 offset_right = 226.0
 offset_bottom = 210.0
-theme_override_fonts/font = SubResource("SystemFont_myx51")
+theme_override_fonts/font = ExtResource("2_ined1")
 text = "START"
 
 [node name="Panel" type="Panel" parent="."]
@@ -62,7 +58,7 @@ offset_left = 138.0
 offset_top = 39.0
 offset_right = 255.0
 offset_bottom = 83.0
-theme_override_fonts/normal_font = SubResource("SystemFont_myx51")
+theme_override_fonts/normal_font = ExtResource("2_ined1")
 bbcode_enabled = true
 text = "[center][wave amp=30.0 freq=2.5 connected=1]Soffie's
 Tiny Garden[/wave][/center]"

@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://v5kyftl71jxk"]
 
 [ext_resource type="TileSet" uid="uid://doqvklwd8owwj" path="res://assets/tile_set.tres" id="1_kyk24"]
-[ext_resource type="SystemFont" uid="uid://bxvifgrbfethi" path="res://fira_font.tres" id="2_japlt"]
+[ext_resource type="FontVariation" uid="uid://mtr26n873h8n" path="res://fira_font.tres" id="2_japlt"]
 
 [node name="End" type="Node2D"]
 
