@@ -185,6 +185,8 @@ func set_tile(position: Vector2i, tile: Tile):
 func _input(event):
 	if updating_world || level_complete:
 		return
+	if event.is_action_pressed("skip_level"):
+		level_completed.emit()
 	if event.is_action_pressed("show_editor"):
 		$LevelEditor.visible = !$LevelEditor.visible
 	if event.is_action_pressed("place_flower"):
@@ -210,6 +212,7 @@ func update_world():
 		
 func update_world_tiles() -> bool:
 	var update_again := false
+	var play_root_grow := false
 	# Use a copy of grid to not update things added onaaaaaadaww this tick
 	var grid_copy := grid.duplicate()
 	for i in grid_copy.size():
@@ -240,18 +243,25 @@ func update_world_tiles() -> bool:
 				if get_tile(pos + Vector2i.UP) == Tile.NOTHING:
 					set_tile(pos + Vector2i.UP, Tile.ROOT_UP)
 					update_again = true
+					play_root_grow = true
 			Tile.ROOT_DOWN:
 				if get_tile(pos + Vector2i.DOWN) == Tile.NOTHING:
 					set_tile(pos + Vector2i.DOWN, Tile.ROOT_DOWN)
 					update_again = true
+					play_root_grow = true
 			Tile.ROOT_LEFT:
 				if get_tile(pos + Vector2i.LEFT) == Tile.NOTHING:
 					set_tile(pos + Vector2i.LEFT, Tile.ROOT_LEFT)
 					update_again = true
+					play_root_grow = true
 			Tile.ROOT_RIGHT:
 				if get_tile(pos + Vector2i.RIGHT) == Tile.NOTHING:
 					set_tile(pos + Vector2i.RIGHT, Tile.ROOT_RIGHT)
 					update_again = true
+					play_root_grow = true
+					
+	if play_root_grow:
+		$RootGrow.play()
 	
 	return update_again
 
@@ -266,6 +276,7 @@ func has_water_for_flower(pos: Vector2i) -> bool:
 func move(direction: Vector2i):
 	if player_can_move(direction):
 		undo_state.push_back([flower_seeds, grid.duplicate()])
+		$Walk.play()
 		player_move(direction)
 		await update_world()
 		check_open_gate()
@@ -305,6 +316,7 @@ func check_open_gate():
 		if x == Tile.FLOWER:
 			all_flowers_bloomed = false
 	if flower_seeds == 0 and all_flowers_bloomed:
+		$GateOpen.play()
 		set_tile(exit_pos(), Tile.EXIT_OPENED)
 
 func exit_opened():

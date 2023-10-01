@@ -1,22 +1,62 @@
-[gd_scene load_steps=4 format=3 uid="uid://cjerafeiil5vm"]
+[gd_scene load_steps=6 format=3 uid="uid://cjerafeiil5vm"]
 
 [ext_resource type="Script" path="res://main.gd" id="1_qgfoy"]
 [ext_resource type="PackedScene" uid="uid://bb8k0son0leij" path="res://Game.tscn" id="2_2smkl"]
-[ext_resource type="SystemFont" uid="uid://bxvifgrbfethi" path="res://fira_font.tres" id="3_xi7qt"]
+
+[sub_resource type="Animation" id="Animation_nl61i"]
+resource_name = "dissolve"
+length = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ColorRect:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="Animation" id="Animation_w73bh"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("ColorRect:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Color(1, 1, 1, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_yshwq"]
+_data = {
+"RESET": SubResource("Animation_w73bh"),
+"dissolve": SubResource("Animation_nl61i")
+}
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_qgfoy")
 
 [node name="Game" parent="." instance=ExtResource("2_2smkl")]
 
-[node name="End" type="Label" parent="."]
-visible = false
-offset_left = 27.0
-offset_top = 70.0
-offset_right = 128.0
-offset_bottom = 99.0
-theme_override_fonts/font = ExtResource("3_xi7qt")
-theme_override_font_sizes/font_size = 24
-text = "The End"
+[node name="ColorRect" type="ColorRect" parent="."]
+modulate = Color(1, 1, 1, 0)
+offset_left = -77.0
+offset_top = -64.0
+offset_right = 320.0
+offset_bottom = 262.0
+mouse_filter = 2
+color = Color(1, 0.898039, 0.737255, 1)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("AnimationLibrary_yshwq")
+}
 
 [connection signal="level_completed" from="Game" to="." method="_on_game_level_completed"]

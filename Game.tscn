@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bb8k0son0leij"]
+[gd_scene load_steps=13 format=3 uid="uid://bb8k0son0leij"]
 
 [ext_resource type="Script" path="res://game.gd" id="1_t34n1"]
 [ext_resource type="SystemFont" uid="uid://bxvifgrbfethi" path="res://fira_font.tres" id="2_yxk3r"]
@@ -6,6 +6,9 @@
 [ext_resource type="PackedScene" uid="uid://g40iy2lruyds" path="res://Flower.tscn" id="4_2pyrn"]
 [ext_resource type="PackedScene" uid="uid://c613s8gj3rnax" path="res://Root.tscn" id="5_juigs"]
 [ext_resource type="Texture2D" uid="uid://cp1ac1o3m26sj" path="res://assets/sheet.png" id="6_cqal3"]
+[ext_resource type="AudioStream" uid="uid://doc5lexvah76v" path="res://assets/walk.wav" id="7_3ykfh"]
+[ext_resource type="AudioStream" uid="uid://cx04t5ivjyj75" path="res://assets/gate_open.wav" id="8_grt5m"]
+[ext_resource type="AudioStream" uid="uid://bfokjroe4nuek" path="res://assets/root.wav" id="9_qse23"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_bffl3"]
 scenes/1/scene = ExtResource("4_2pyrn")
@@ -115,6 +118,20 @@ offset_left = 28.0
 offset_top = -27.0
 offset_right = 111.062
 offset_bottom = 4.0
+
+[node name="Walk" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7_3ykfh")
+pitch_scale = 1.1
+bus = &"SFX"
+
+[node name="GateOpen" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("8_grt5m")
+bus = &"SFX"
+
+[node name="RootGrow" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("9_qse23")
+pitch_scale = 0.4
+bus = &"SFX"
 
 [connection signal="text_changed" from="LevelEditor/TextEdit" to="." method="_on_text_edit_text_changed"]
 [connection signal="pressed" from="LevelEditor/Button" to="." method="_on_level_editor_button_pressed"]
