@@ -18,6 +18,7 @@ enum Tile {
 	ROOT_RIGHT,
 	ROOT_UP,
 	ROOT_DOWN,
+	BIG_CRATE
 }
 
 signal level_completed
@@ -31,9 +32,7 @@ var flower_seeds := 0:
 		flower_seeds = value
 
 @onready var tile_map: TileMap = $TileMap
-@onready var player: Node = $Player
 @onready var flower_seeds_label = $UI/FlowerSeed
-
 @onready var text_edit: TextEdit = $LevelEditor/TextEdit
 
 var WIDTH := 9
@@ -52,7 +51,7 @@ XXXXEXXXX
 .........
 .........
 X.....X..
-......FW.
+..C...FW.
 F.....X..
 .........
 X........
@@ -85,11 +84,14 @@ func load_level(level: Array):
 				grid.push_back(Tile.FLOWER)
 			"P":
 				grid.push_back(Tile.PLAYER_UP)
+			"C":
+				grid.push_back(Tile.BIG_CRATE)
 	for x in range(WIDTH):
 		for y in range(HEIGHT):
 			var index = x + y * WIDTH
 			set_tile(Vector2i(x, y), grid[index])
-				
+	
+	update_world()
 
 func player_pos() -> Vector2i:
 	for i in grid.size():
@@ -107,12 +109,24 @@ func exit_pos() -> Vector2i:
 	push_error("Exit not found")
 	return Vector2i.ZERO
 
-func player_can_move(direction: Vector2i) -> bool:
+func can_player_move(direction: Vector2i) -> bool:
 	var next_pos := player_pos() + direction
 	var next_tile := get_tile(next_pos)
 	match next_tile:
 		Tile.NOTHING, Tile.EXIT_OPENED:
 			return true
+		Tile.BIG_CRATE:
+			return can_crate_move(next_pos, direction)
+	return false
+	
+func can_crate_move(pos: Vector2i, direction: Vector2i) -> bool:
+	var next_pos := pos + direction
+	var move_tile := get_tile(next_pos)
+	match move_tile:
+		Tile.NOTHING:
+			return true
+		Tile.BIG_CRATE:
+			return can_crate_move(next_pos, direction)
 	return false
 
 func can_place_flower(pos: Vector2i) -> bool:
@@ -122,26 +136,45 @@ func can_place_flower(pos: Vector2i) -> bool:
 			return true
 	return false
 	
+func crate_move(pos: Vector2i, direction: Vector2i):
+	var next_pos := pos + direction
+	var next_tile := get_tile(next_pos)
+	match next_tile:
+		Tile.NOTHING:
+			set_tile(next_pos, Tile.BIG_CRATE)
+			set_tile(pos, Tile.NOTHING)
+		Tile.BIG_CRATE:
+			crate_move(next_pos, direction)
+			set_tile(next_pos, Tile.BIG_CRATE)
+			set_tile(pos, Tile.NOTHING)
+
+func set_player_tile(pos: Vector2i, direction: Vector2i):
+	match direction:
+		Vector2i.UP:
+			set_tile(pos, Tile.PLAYER_UP)
+		Vector2i.DOWN:
+			set_tile(pos, Tile.PLAYER_DOWN)
+		Vector2i.LEFT:
+			set_tile(pos, Tile.PLAYER_LEFT)
+		Vector2i.RIGHT:
+			set_tile(pos, Tile.PLAYER_RIGHT)
+
 func player_move(direction: Vector2i):
 	var current_pos := player_pos()
 	var next_pos := current_pos + direction
 	var next_tile := get_tile(next_pos)
 	match next_tile:
 		Tile.NOTHING:
-			player.position = $TileMap.map_to_local(next_pos)
-			match direction:
-				Vector2i.UP:
-					set_tile(next_pos, Tile.PLAYER_UP)
-				Vector2i.DOWN:
-					set_tile(next_pos, Tile.PLAYER_DOWN)
-				Vector2i.LEFT:
-					set_tile(next_pos, Tile.PLAYER_LEFT)
-				Vector2i.RIGHT:
-					set_tile(next_pos, Tile.PLAYER_RIGHT)
+			set_player_tile(next_pos, direction)
 			set_tile(current_pos, Tile.NOTHING)
 		Tile.EXIT_OPENED:
+			set_tile(current_pos, Tile.NOTHING)
 			set_tile(next_pos, Tile.PLAYER_UP)
 			level_complete = true
+		Tile.BIG_CRATE:
+			crate_move(next_pos, direction)
+			set_tile(current_pos, Tile.NOTHING)
+			set_player_tile(next_pos, direction)
 	
 func get_tile(position: Vector2i) -> Tile:
 	if position.x < 0 or position.x >= WIDTH or position.y < 0 or position.y >= HEIGHT:
@@ -156,31 +189,29 @@ func set_tile(position: Vector2i, tile: Tile):
 		Tile.NOTHING:
 			tile_map.set_cell(1, position, -1)
 		Tile.WATER:
-			tile_map.set_cell(1, position, 2, Vector2i(0, 1))
+			tile_map.set_cell(1, position, 0, Vector2i(0, 1))
 		Tile.ROCK:
-			tile_map.set_cell(1, position, 2, Vector2i(1, 1))
+			tile_map.set_cell(1, position, 0, Vector2i(1, 1))
 		Tile.EXIT_CLOSED:
-			tile_map.set_cell(1, position, 2, Vector2i(3, 0))
+			tile_map.set_cell(1, position, 0, Vector2i(3, 0))
 		Tile.EXIT_OPENED:
-			tile_map.set_cell(1, position, 2, Vector2i(4, 0))
+			tile_map.set_cell(1, position, 0, Vector2i(4, 0))
 		Tile.PLAYER_LEFT:
-			player.position = tile_map.map_to_local(position)
-			player.set_frame_coords(Vector2i(2,2))
+			tile_map.set_cell(1, position, 0, Vector2i(2, 2))
 		Tile.PLAYER_RIGHT:
-			player.position = tile_map.map_to_local(position)
-			player.set_frame_coords(Vector2i(1,2))
+			tile_map.set_cell(1, position, 0, Vector2i(1, 2))
 		Tile.PLAYER_UP:
-			player.position = tile_map.map_to_local(position)
-			player.set_frame_coords(Vector2i(0,3))
+			tile_map.set_cell(1, position, 0, Vector2i(0, 3))
 		Tile.PLAYER_DOWN:
-			player.position = tile_map.map_to_local(position)
-			player.set_frame_coords(Vector2i(0,2))
+			tile_map.set_cell(1, position, 0, Vector2i(0, 2))
 		Tile.FLOWER:
-			tile_map.set_cell(1, position, 2, Vector2i(0, 0))
+			tile_map.set_cell(1, position, 0, Vector2i(0, 0))
 		Tile.FLOWER_BLOOMED:
-			tile_map.set_cell(1, position, 1, Vector2i.ZERO, 1)
+			tile_map.set_cell(1, position, 0, Vector2i(1, 0))
 		Tile.ROOT_UP, Tile.ROOT_LEFT, Tile.ROOT_RIGHT, Tile.ROOT_DOWN:
-			tile_map.set_cell(1, position, 1, Vector2i.ZERO, 2)
+			tile_map.set_cell(1, position, 0, Vector2i(2, 0))
+		Tile.BIG_CRATE:
+			tile_map.set_cell(1, position, 0, Vector2i(1, 3))
 
 func _input(event):
 	if updating_world || level_complete:
@@ -274,7 +305,7 @@ func has_water_for_flower(pos: Vector2i) -> bool:
 	return false
 
 func move(direction: Vector2i):
-	if player_can_move(direction):
+	if can_player_move(direction):
 		undo_state.push_back([flower_seeds, grid.duplicate()])
 		$Walk.play()
 		player_move(direction)
