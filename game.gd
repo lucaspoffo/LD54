@@ -10,15 +10,21 @@ enum Tile_Kind {
 	FLOWER,
 	FLOWER_BLOOMED,
 	ROCK,
-	WATER,
 	ROOT,
-	BIG_CRATE
+	BIG_CRATE,
+}
+
+enum Ground_Kind {
+	WATER,
+	GROUND,
+	WATER_WITH_CRATE
 }
 
 signal level_completed
 
 var grid_kind: Array[Tile_Kind] = []
 var grid_info: Array = []
+var grid_ground: Array[Ground_Kind] = []
 
 var flower_seeds := 0:
 	get:
@@ -63,6 +69,7 @@ func load_level(level: Array):
 	updating_world = false
 	grid_kind.clear()
 	grid_info.clear()
+	grid_ground.clear()
 	undo_state.clear()
 	flower_seeds = level[0]
 	var text = level[1]
@@ -72,28 +79,36 @@ func load_level(level: Array):
 			".":
 				grid_kind.push_back(Tile_Kind.NOTHING)
 				grid_info.push_back(null)
+				grid_ground.push_back(Ground_Kind.GROUND)
 			"E":
 				grid_kind.push_back(Tile_Kind.EXIT_CLOSED)
 				grid_info.push_back(null)
+				grid_ground.push_back(Ground_Kind.GROUND)
 			"W":
-				grid_kind.push_back(Tile_Kind.WATER)
+				grid_kind.push_back(Tile_Kind.NOTHING)
 				grid_info.push_back(null)
+				grid_ground.push_back(Ground_Kind.WATER)
 			"X":
 				grid_kind.push_back(Tile_Kind.ROCK)
 				grid_info.push_back(null)
+				grid_ground.push_back(Ground_Kind.GROUND)
 			"F":
 				grid_kind.push_back(Tile_Kind.FLOWER)
 				grid_info.push_back(null)
+				grid_ground.push_back(Ground_Kind.GROUND)
 			"P":
 				grid_kind.push_back(Tile_Kind.PLAYER)
 				grid_info.push_back(Vector2i.UP)
+				grid_ground.push_back(Ground_Kind.GROUND)
 			"C":
 				grid_kind.push_back(Tile_Kind.BIG_CRATE)
 				grid_info.push_back(null)
+				grid_ground.push_back(Ground_Kind.GROUND)
 	for x in range(WIDTH):
 		for y in range(HEIGHT):
 			var index = x + y * WIDTH
 			set_tile(Vector2i(x, y), grid_kind[index], grid_info[index])
+			set_ground(Vector2i(x, y), grid_ground[index])
 	
 	update_world()
 
@@ -104,6 +119,13 @@ func player_pos() -> Vector2i:
 	
 	push_error("Player not found")
 	return Vector2i.ZERO
+
+func player_pushable(tile: Tile_Kind) -> bool:
+	match tile:
+		Tile_Kind.BIG_CRATE:
+			return true
+			
+	return false
 	
 func exit_pos() -> Vector2i:
 	for i in grid_kind.size():
@@ -116,58 +138,57 @@ func exit_pos() -> Vector2i:
 func can_player_move(direction: Vector2i) -> bool:
 	var next_pos := player_pos() + direction
 	var next_tile := get_tile(next_pos)
-	match next_tile:
-		Tile_Kind.NOTHING, Tile_Kind.EXIT_OPENED:
-			return true
-		Tile_Kind.BIG_CRATE:
-			return can_crate_move(next_pos, direction)
-	return false
+	if player_pushable(next_tile):
+		return can_player_push(next_pos, direction)
 	
-func can_crate_move(pos: Vector2i, direction: Vector2i) -> bool:
+	if get_ground(next_pos) == Ground_Kind.WATER:
+		return false
+	
+	return next_tile == Tile_Kind.NOTHING || next_tile == Tile_Kind.EXIT_OPENED
+
+
+func can_player_push(pos: Vector2i, direction: Vector2i) -> bool:
 	var next_pos := pos + direction
-	var move_tile := get_tile(next_pos)
-	match move_tile:
-		Tile_Kind.NOTHING:
-			return true
-		Tile_Kind.BIG_CRATE:
-			return can_crate_move(next_pos, direction)
-	return false
+	var target_tile := get_tile(next_pos)
+	if player_pushable(target_tile):
+		return can_player_push(next_pos, direction)
+	
+	return target_tile == Tile_Kind.NOTHING
 
 func can_place_flower(pos: Vector2i) -> bool:
-	var tile := get_tile(pos)
-	match tile:
-		Tile_Kind.NOTHING:
-			return true
-	return false
+	return get_tile(pos) == Tile_Kind.NOTHING
 	
-func crate_move(pos: Vector2i, direction: Vector2i):
+func can_root_grow(pos: Vector2i) -> bool:
+	if get_tile(pos) != Tile_Kind.NOTHING:
+		return false
+		
+	if get_ground(pos) != Ground_Kind.GROUND:
+		return false
+		
+	return true
+			
+func push_tile(pos: Vector2i, direction: Vector2i):
 	var next_pos := pos + direction
 	var next_tile := get_tile(next_pos)
-	match next_tile:
-		Tile_Kind.NOTHING:
-			set_tile(next_pos, Tile_Kind.BIG_CRATE)
-			set_tile(pos, Tile_Kind.NOTHING)
-		Tile_Kind.BIG_CRATE:
-			crate_move(next_pos, direction)
-			set_tile(next_pos, Tile_Kind.BIG_CRATE)
-			set_tile(pos, Tile_Kind.NOTHING)
+	if player_pushable(next_tile):
+		push_tile(next_pos, direction)
+	set_tile(next_pos, get_tile(pos))
+	set_tile(pos, Tile_Kind.NOTHING)
 
 func player_move(direction: Vector2i):
 	var current_pos := player_pos()
 	var next_pos := current_pos + direction
 	var next_tile := get_tile(next_pos)
-	match next_tile:
-		Tile_Kind.NOTHING:
-			set_tile(next_pos, Tile_Kind.PLAYER, direction)
-			set_tile(current_pos, Tile_Kind.NOTHING)
-		Tile_Kind.EXIT_OPENED:
-			set_tile(current_pos, Tile_Kind.NOTHING)
-			set_tile(next_pos, Tile_Kind.PLAYER, Vector2i.UP)
-			level_complete = true
-		Tile_Kind.BIG_CRATE:
-			crate_move(next_pos, direction)
-			set_tile(current_pos, Tile_Kind.NOTHING)
-			set_tile(next_pos, Tile_Kind.PLAYER, direction)
+	var next_ground := get_ground(next_pos)
+		
+	if can_player_push(next_pos, direction):
+		push_tile(next_pos, direction)
+		
+	if next_tile == Tile_Kind.EXIT_OPENED:
+		level_complete = true
+	
+	set_tile(current_pos, Tile_Kind.NOTHING)
+	set_tile(next_pos, Tile_Kind.PLAYER, direction)
 	
 func get_tile(position: Vector2i) -> Tile_Kind:
 	if position.x < 0 or position.x >= WIDTH or position.y < 0 or position.y >= HEIGHT:
@@ -175,6 +196,23 @@ func get_tile(position: Vector2i) -> Tile_Kind:
 	var index = position.x + position.y * WIDTH
 	return grid_kind[index]
 	
+func get_ground(position: Vector2i) -> Ground_Kind:
+	if position.x < 0 or position.x >= WIDTH or position.y < 0 or position.y >= HEIGHT:
+		return Ground_Kind.GROUND
+	var index = position.x + position.y * WIDTH
+	return grid_ground[index]
+
+func set_ground(position: Vector2i, tile: Ground_Kind):
+	var index = position.x + position.y * WIDTH
+	grid_ground[index] = tile
+	match tile:
+		Ground_Kind.WATER:
+			tile_map.set_cell(0, position, 0, Vector2i(0, 1))
+		Ground_Kind.WATER_WITH_CRATE:
+			tile_map.set_cell(0, position, 0, Vector2i(2, 3))
+		Ground_Kind.GROUND:
+			tile_map.set_cell(0, position, 0, Vector2i(2, 1))
+
 func set_tile(position: Vector2i, tile: Tile_Kind, info = null):
 	var index = position.x + position.y * WIDTH
 	grid_kind[index] = tile
@@ -182,8 +220,6 @@ func set_tile(position: Vector2i, tile: Tile_Kind, info = null):
 	match tile:
 		Tile_Kind.NOTHING:
 			tile_map.set_cell(1, position, -1)
-		Tile_Kind.WATER:
-			tile_map.set_cell(1, position, 0, Vector2i(0, 1))
 		Tile_Kind.ROCK:
 			tile_map.set_cell(1, position, 0, Vector2i(1, 1))
 		Tile_Kind.EXIT_CLOSED:
@@ -256,12 +292,12 @@ func update_world_tiles() -> bool:
 					update_again = true
 			Tile_Kind.FLOWER_BLOOMED:
 				for direction in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-					if get_tile(pos + direction) == Tile_Kind.NOTHING:
+					if can_root_grow(pos + direction):
 						set_tile(pos + direction, Tile_Kind.ROOT, direction)
 						update_again = true
 			Tile_Kind.ROOT:
 				var direction: Vector2i = grid_info_copy[i]
-				if get_tile(pos + direction) == Tile_Kind.NOTHING:
+				if can_root_grow(pos + direction):
 					set_tile(pos + direction, Tile_Kind.ROOT, direction)
 					update_again = true
 					play_root_grow = true
@@ -273,15 +309,18 @@ func update_world_tiles() -> bool:
 
 func has_water_for_flower(pos: Vector2i) -> bool:
 	var tile := get_tile(pos)
-	match tile:
-		Tile_Kind.WATER, Tile_Kind.ROOT:
-			return true
+	if tile == Tile_Kind.ROOT:
+		return true
+		
+	var ground := get_ground(pos)
+	if ground == Ground_Kind.WATER:
+		return true
 			
 	return false
 
 func move(direction: Vector2i):
 	if can_player_move(direction):
-		undo_state.push_back([flower_seeds, grid_kind.duplicate(), grid_info.duplicate()])
+		undo_state.push_back([flower_seeds, grid_kind.duplicate(), grid_info.duplicate(), grid_ground.duplicate()])
 		$Walk.play()
 		player_move(direction)
 		await update_world()
@@ -330,11 +369,13 @@ func undo():
 		flower_seeds = old_state[0]
 		var state_kind = old_state[1]
 		var state_info = old_state[2]
+		var state_ground = old_state[3]
 
 		for x in range(WIDTH):
 			for y in range(HEIGHT):
 				var index = x + y * WIDTH
 				set_tile(Vector2i(x, y), state_kind[index], state_info[index])
+				set_ground(Vector2i(x, y), state_ground[index])
 
 func reset():
 	load_level(current_level)
