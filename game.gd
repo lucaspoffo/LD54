@@ -15,9 +15,9 @@ enum Tile_Kind {
 }
 
 enum Ground_Kind {
-	WATER,
-	GROUND,
-	WATER_WITH_CRATE
+	WATER = 100,
+	GROUND = 101,
+	WATER_WITH_CRATE = 102
 }
 
 signal level_completed
@@ -36,6 +36,8 @@ var flower_seeds := 0:
 @onready var tile_map: TileMap = $TileMap
 @onready var flower_seeds_label = $UI/FlowerSeed
 @onready var text_edit: TextEdit = $LevelEditor/TextEdit
+
+@export var level_resource: Level
 
 var WIDTH := 9
 var HEIGHT := 10
@@ -62,6 +64,13 @@ X........
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	text_edit.text = current_level[1]
+
+func load_level_from_resource(level: Level):
+	grid_kind = level_resource.grid_kind
+	grid_info = level_resource.grid_info
+	grid_ground = level_resource.grid_ground
+	undo_state.clear()
+	flower_seeds = level_resource.flower_seeds
 
 func load_level(level: Array):
 	current_level = level
@@ -110,6 +119,12 @@ func load_level(level: Array):
 			set_tile(Vector2i(x, y), grid_kind[index], grid_info[index])
 			set_ground(Vector2i(x, y), grid_ground[index])
 	
+	level_resource.grid_kind = grid_kind
+	level_resource.grid_info = grid_info
+	level_resource.grid_ground = grid_ground
+	level_resource.flower_seeds = flower_seeds
+	ResourceSaver.save(level_resource)
+	
 	update_world()
 
 func player_pos() -> Vector2i:
@@ -146,14 +161,16 @@ func can_player_move(direction: Vector2i) -> bool:
 	
 	return next_tile == Tile_Kind.NOTHING || next_tile == Tile_Kind.EXIT_OPENED
 
-
 func can_player_push(pos: Vector2i, direction: Vector2i) -> bool:
+	var tile := get_tile(pos)
+	if !player_pushable(tile):
+		return false
 	var next_pos := pos + direction
 	var target_tile := get_tile(next_pos)
 	if player_pushable(target_tile):
 		return can_player_push(next_pos, direction)
 	
-	return target_tile == Tile_Kind.NOTHING
+	return target_tile == Tile_Kind.NOTHING and get_ground(next_pos) != Ground_Kind.WATER
 
 func can_place_flower(pos: Vector2i) -> bool:
 	return get_tile(pos) == Tile_Kind.NOTHING
@@ -248,10 +265,16 @@ func set_tile(position: Vector2i, tile: Tile_Kind, info = null):
 func _input(event):
 	if updating_world || level_complete:
 		return
-	if event.is_action_pressed("skip_level"):
-		level_completed.emit()
+	
 	if event.is_action_pressed("show_editor"):
 		$LevelEditor.visible = !$LevelEditor.visible
+		$Editor.visible = !$Editor.visible
+		$Editor.editor_enabled = !$Editor.editor_enabled
+	
+	if $Editor.editor_enabled:
+		return
+	if event.is_action_pressed("skip_level"):
+		level_completed.emit()
 	if event.is_action_pressed("place_flower"):
 		place_flower()
 	if event.is_action_pressed("move_up"):
